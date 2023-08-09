@@ -1,0 +1,21 @@
+{
+  "player_regression_league_mp": 99.85,
+  "player_regression_league_height": 0.289,
+  "player_regression_career_mp": 35.16,
+  "player_regression_career_height": 0.910,
+  "player_sf": 0.0781,
+  "player_career_sf_base": 0.00,
+  "player_career_sf_height": 0.061,
+  "player_career_sf_mp": 112,
+  "rookie_draft_intercept": 10.7,
+  "rookie_draft_slope": -5.42,
+  "rookie_league_reg": 0.68,
+  "rookie_league_cap": -0.24,
+  "rookie_undrafted_draft_number": 300,
+  "team_off_league_reversion": 0.0972,
+  "team_off_qb_reversion": 0.617,
+  "team_off_sf": 0.0346,
+  "team_def_sf": 0.035,
+  "team_def_reversion": 0.40,
+  "init_value": 25
+}
