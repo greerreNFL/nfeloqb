@@ -71,7 +71,7 @@ class EloConstructor():
                 'player_VALUE_adj' : 'qb2_game_value',
                 'qb_value_post' : 'qb2_value_post'
             }),
-            on=['game_id', 'team'],
+            on=['game_id', 'away_team'],
             how='left'
         )
     
