@@ -205,9 +205,17 @@ class DataLoader():
     def iso_top_passer(self, df):
         ## So as not to update the rating of a QB who had few passes, only include
         ## the top passer ##
+        ## however, if this player was not the starter, then we need to override ##
+        ## add starter info ##
+        ## this needs to be cleaned up -- i think the attempts are not relevant as we are just using starter
+        df['is_starter'] = numpy.where(
+            df['player_id'] == df['starter_id'],
+            1,
+            numpy.nan
+        )
         return df.sort_values(
-            by=['game_id', 'attempts'],
-            ascending=[True, False]
+            by=['game_id', 'is_starter', 'attempts'],
+            ascending=[True, False, False]
         ).groupby(['game_id', 'team']).head(1).reset_index(drop=True)
     
     def format_top_passer(self, df):
