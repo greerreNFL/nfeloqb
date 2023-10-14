@@ -41,7 +41,8 @@ class DataLoader():
         try:
             df = pd.read_csv(
                 self.player_stats_url,
-                compression='gzip'
+                compression='gzip',
+                low_memory=False
             )
             ## only  qbs are relevant ##
             df=df[

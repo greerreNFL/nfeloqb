@@ -4,10 +4,11 @@ import numpy
 class EloConstructor():
     ## this class takes in the updated model data, next weeks games, and ##
     ## the original elo file to create a new elo file in the same format ##
-    def __init__(self, games, qb_model, at_wrapper, export_loc):
+    def __init__(self, games, qb_model, at_wrapper, elo, export_loc):
         self.games = games.copy()
         self.qb_model = qb_model ## an updated QBModel Class object ##
         self.at_wrapper = at_wrapper ## an updated AirtableWrapper Class object ##
+        self.elo = elo ## an updated Elo Class object ##
         self.export_loc = export_loc ## location to export new file ##
         self.qb_values = pd.DataFrame(qb_model.data)
         self.original_elo_file = pd.read_csv(self.qb_model.original_file_loc, index_col=0) ## original elo file ##
@@ -176,6 +177,71 @@ class EloConstructor():
             axis=1
         )
     
+    def add_elo_to_new_and_next(self):
+        ## add the elo to the new games and next games ##
+        ## since elo is built from the same game df as new and next games ##
+        ## everything should join correctly and last week of elo should be the last ##
+        ## week of new games, but there is possibility we introduce some bugs here ##
+        if self.new_games is not None:
+            self.new_games = pd.merge(
+                self.new_games,
+                self.elo.elo_df[[
+                    'game_id', 'elo1_pre', 'elo2_pre', 'elo_prob1', 'elo_prob2',
+                    'elo1_post', 'elo2_post', 'qbelo1_pre', 'qbelo2_pre',
+                    'qbelo_prob1', 'qbelo_prob2', 'qbelo1_post', 'qbelo2_post'
+                ]],
+                on=['game_id'],
+                how='left'
+            )
+        if self.next_games is not None:
+            ## for next cames, elos need to be pulled from the elo file ##
+            ## will use apply function to build out values ##
+            hfa = self.elo.current_hfa
+            def apply_elo_to_next(row):
+                ##  get home and away elos ##
+                home_elo = self.elo.current_elos[row['home_team']]
+                away_elo = self.elo.current_elos[row['away_team']]
+                ## determine if there is a bye ##
+                bye_adj = 0
+                if row['home_rest'] >= 10:
+                    bye_adj += 1
+                if row['away_rest'] >= 10:
+                    bye_adj -= 1
+                bye_adj *= self.elo.rest
+                ## determine if there is a hfa ##
+                hfa_adj = 0
+                if row['location'] == 'Home':
+                    hfa_adj = hfa
+                ## calc elo dif ##
+                elo_dif_ex_qb = home_elo - away_elo + bye_adj + hfa_adj
+                elo_dif = home_elo - away_elo + bye_adj + hfa_adj + row['qb1_adj'] - row['qb2_adj']
+                ## get prob ##
+                home_prob = 1 / (10 ** (-elo_dif/self.elo.b) + 1)
+                away_prob = 1 - home_prob
+                home_prob_ex_qb = 1 / (10 ** (-elo_dif_ex_qb/self.elo.b) + 1)
+                away_prob_ex_qb = 1 - home_prob_ex_qb
+                ## add to row ##
+                row['elo1_pre'] = home_elo
+                row['elo2_pre'] = away_elo
+                row['elo_prob1'] = home_prob_ex_qb
+                row['elo_prob2'] = away_prob_ex_qb
+                row['elo1_post'] = numpy.nan
+                row['elo2_post'] = numpy.nan
+                row['qbelo1_pre'] = home_elo + row['qb1_adj']
+                row['qbelo2_pre'] = away_elo + row['qb2_adj']
+                row['qbelo_prob1'] = home_prob
+                row['qbelo_prob2'] = away_prob
+                row['qbelo1_post'] = numpy.nan
+                row['qbelo2_post'] = numpy.nan
+                ## return ##
+                return row
+            ## apply ##
+            self.next_games = self.next_games.apply(
+                apply_elo_to_next,
+                axis=1
+            )
+    
+    
     def merge_new_and_next(self):
         ## merge new games and next games with logic to handle blanks ##
         if self.new_games is None:
@@ -221,6 +287,20 @@ class EloConstructor():
         new_row['qb2_adj'] = row['qb2_adj'] * 3.3
         new_row['qb1_game_value'] = row['qb1_game_value'] * 3.3
         new_row['qb2_game_value'] = row['qb2_game_value'] * 3.3
+        ## elo values ##
+        new_row['elo1_pre'] = row['elo1_pre']
+        new_row['elo2_pre'] = row['elo2_pre']
+        new_row['elo_prob1'] = row['elo_prob1']
+        new_row['elo_prob2'] = row['elo_prob2']
+        new_row['elo1_post'] = row['elo1_post']
+        new_row['elo2_post'] = row['elo2_post']
+        ## qbelo values ##
+        new_row['qbelo1_pre'] = row['qbelo1_pre']
+        new_row['qbelo2_pre'] = row['qbelo2_pre']
+        new_row['qbelo_prob1'] = row['qbelo_prob1']
+        new_row['qbelo_prob2'] = row['qbelo_prob2']
+        new_row['qbelo1_post'] = row['qbelo1_post']
+        new_row['qbelo2_post'] = row['qbelo2_post']
         ## netural locs ##
         if row['location'] == 'Home':
             new_row['neutral'] = 0
@@ -274,6 +354,8 @@ class EloConstructor():
             self.add_starters()
             print('          Adding team values for adjustments...')
             self.add_team_values()
+        print('     Adding Elo model...')
+        self.add_elo_to_new_and_next()
         print('     Merging new and next games...')
         self.merge_new_and_next()
         if self.new_file_games is None:

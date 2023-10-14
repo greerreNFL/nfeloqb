@@ -2,6 +2,7 @@
 ## import modules ##
 import pathlib
 import json
+import pandas as pd
 
 ## import resources ##
 from .Resources import *
@@ -18,7 +19,7 @@ def run(perform_starter_update=True, model_only=False):
     ## load data ##
     data = DataLoader()
     ## run model ##
-    print('Running model...')
+    print('Running QB model...')
     model = QBModel(data.model_df, config)
     model.run_model()
     if model_only:
@@ -35,12 +36,20 @@ def run(perform_starter_update=True, model_only=False):
     ## pause and wait for confirmation that manual edits have been made in airtable ##
     decision = input('When starters have been updated in Airtable, type "RUN" and press enter:')
     print(decision)
+    ## run elo model ##
+    print('Running Elo model...')
+    elo = Elo(
+        data.games,
+        pd.DataFrame(model.data)
+    )
+    elo.run()
     ## construct elo file ##
     if decision == 'RUN':
         constructor = EloConstructor(
             data.games,
             model,
             at_wrapper,
+            elo,
             package_folder
         )
         constructor.construct_elo_file()
