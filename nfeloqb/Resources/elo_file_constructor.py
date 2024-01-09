@@ -310,7 +310,7 @@ class EloConstructor():
         if row['game_type'] == 'REG':
             new_row['playoff'] = numpy.nan
         else:
-            new_row['playoff'] = 1
+            new_row['playoff'] = 'w'
         ## write row to new file data ##
         self.new_file_data.append(new_row)
     
