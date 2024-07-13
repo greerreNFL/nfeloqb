@@ -1,1 +1,1 @@
-from .nfeloqb.nfeloqb import run
+from .nfeloqb import *
