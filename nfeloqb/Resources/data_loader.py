@@ -3,27 +3,20 @@ import pandas as pd
 import numpy
 import pathlib
 
+import nfelodcm as dcm
+
 class DataLoader():
     ## this class retrieves, loads, and merges data ##
     def __init__(self):
         ## dfs we want to output ##
         self.model_df = None
         self.games_df = None
-        ## locations of external data ##
-        self.player_stats_url = 'https://github.com/nflverse/nflverse-data/releases/download/player_stats/player_stats.csv.gz'
-        self.player_info_url = 'https://github.com/nflverse/nflverse-data/releases/download/players/players.csv'
-        self.game_data_url = 'https://github.com/nflverse/nfldata/raw/master/data/games.csv'
-        ## repl dicts ##
-        self.player_file_repl = {
-            'LA': 'LAR',
-            'LV': 'OAK',
-        }
-        self.games_file_repl = {
-            'LA': 'LAR',
-            'LV': 'OAK',
-            'STL': 'LAR',
-            'SD': 'LAC',
-        }
+        ## load external data ##
+        self.db = dcm.load([
+            'games',
+            'players',
+            'player_stats'
+        ])
         ## variabbles
         self.stat_cols = [
             'completions', 'attempts', 'passing_yards', 'passing_tds',
@@ -36,27 +29,16 @@ class DataLoader():
         self.pull_data()
         
     def retrieve_player_stats(self):
-        ## download stats from nflverse ##
-        ## these are pre-aggregated from the pbp, which saves time/compute ##
-        try:
-            df = pd.read_csv(
-                self.player_stats_url,
-                compression='gzip',
-                low_memory=False
-            )
-            ## only  qbs are relevant ##
-            df=df[
-                df['position'] == 'QB'
-            ].copy()
-            ## file only has recent abbreviation of team name. Standardize so we can join ##
-            df['recent_team'] = df['recent_team'].replace(self.player_file_repl)
-            df = df.rename(columns={
-                'recent_team': 'team',
-            })
-            return df
-        except Exception as e:
-            print('     Error retrieving player stats: ' + str(e))
-            return None
+        ## format the loaded player stats ##
+        df = self.db['player_stats']
+        ## only qbs are relevant ##
+        df=df[
+            df['position'] == 'QB'
+        ].copy()
+        df = df.rename(columns={
+            'recent_team': 'team',
+        })
+        return df
     
     def retrieve_player_meta(self, df):
         ## get player meta and add it to the stats ##
@@ -100,9 +82,7 @@ class DataLoader():
             return df
         ## get player meta ##
         try:
-            meta = pd.read_csv(
-                self.player_info_url
-            )
+            meta = self.db['players']
             meta = meta.groupby(['gsis_id']).head(1)
             ## add to df ##
             df = pd.merge(
@@ -128,20 +108,8 @@ class DataLoader():
     def add_game_data(self, df):
         ## add game data ##
         try:
-            game = pd.read_csv(
-                self.game_data_url
-            )
-            ## replace team names ##
-            game['home_team'] = game['home_team'].replace(self.games_file_repl)
-            game['away_team'] = game['away_team'].replace(self.games_file_repl)
-            ## use replaced home and away names to reconstitute the game id ##
-            game['game_id'] = (
-                game['season'].astype(str) + '_' +
-                game['week'].astype(str).str.zfill(2) + '_' +
-                game['away_team'] + '_' +
-                game['home_team']
-            )
             ## games will be used in the future so add to class ##
+            game = self.db['games']
             self.games = game.copy()
             ## flatten ##
             game_flat = pd.concat([

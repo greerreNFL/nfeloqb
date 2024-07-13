@@ -1,0 +1,57 @@
+name: run
+
+on:
+  schedule:
+    - cron: '0 8 * 8-12,1-2 2-4'
+
+permissions:
+  contents: write
+
+env:
+  AIRTABLE_BASE: ${{ secrets.AIRTABLE_BASE }}
+  AIRTABLE_QB_TABLE: ${{ secrets.AIRTABLE_QB_TABLE }}
+  AIRTABLE_START_TABLE: ${{ secrets.AIRTABLE_START_TABLE }}
+  AIRTABLE_TOKEN: ${{ secrets.AIRTABLE_TOKEN }}
+  AIRTABLE_QB_FIELDS: ${{ secrets.AIRTABLE_QB_FIELDS }}
+  AIRTABLE_DROPDOWN_ID: ${{ secrets.AIRTABLE_DROPDOWN_ID }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+      
+      - name: install packages
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: execute
+        run: python workflow.py run
+
+      - name: Verify changes
+        id: verify_diff
+        run: |
+          git diff --quiet . || echo "changed=true" >> $GITHUB_OUTPUT
+      
+      - name: commit files
+        if: steps.verify_diff.outputs.changed == 'true'
+        run: |
+          git config --local user.email "actions@github.com"
+          git config --local user.name "Github Action"
+          git add .
+          git commit -am "automatic update"
+
+      - name: push changes
+        if: steps.verify_diff.outputs.changed == 'true'
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: main

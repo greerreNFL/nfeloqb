@@ -543,14 +543,36 @@ class AirtableWrapper():
         starters_data = []
         for record in qbs_resp:
             ## control for missing ##
-            for field in ['team', 'player_id', 'player_display_name', 'draft_number']:
+            for field in ['team', 'player_id', 'player_display_name', 'draft_number', 'last_updated']:
                 if field not in record['fields']:
                     record['fields'][field] = numpy.nan
             starters_data.append({
                 'team' : record['fields']['team'],
                 'player_id' : record['fields']['player_id'],
                 'player_display_name' : record['fields']['player_display_name'],
-                'draft_number' : record['fields']['draft_number']
+                'draft_number' : record['fields']['draft_number'],
+                'last_updated' : record['fields']['last_updated']
             })
         ## write ##
         self.starters_df = pd.DataFrame(starters_data)
+    
+    def get_last_update(self):
+        '''
+        Returns the timestampe when the starters table was last updated
+        '''
+        ## get the starters ##
+        self.pull_current_starters()
+        starters = self.starters_df.copy()
+        ## ensure time format ##
+        starters['last_updated'] = pd.to_datetime(
+            starters['last_updated'],
+            errors='coerce',
+            utc=True
+        )
+        ## sort ##
+        starters = starters.sort_values(
+            by=['last_updated'],
+            ascending=[False]
+        ).reset_index(drop=True)
+        ## return most recent ##
+        return starters.iloc[0]['last_updated']
