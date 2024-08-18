@@ -255,7 +255,17 @@ class EloConstructor():
                 self.new_file_games = self.new_games
             else:
                 ## merge ##
-                ## align columns ##
+                ## next games has some columns that are all NA because they ahve occured yet ##
+                ## as a result, there is no gaurantee their dtype will match the same col
+                ## in new games. To avoid any warnings, and ensure a proper concat, set explicitly ##
+                self.next_games=self.next_games.astype(
+                    ## by only passing new game dtypes, it also filters next games
+                    ## to the correct columns
+                    ## note: we dont ensure that the dtypes work for the all nan fields (ie ints wont cast)
+                    ## and we dont check to make sure all of new_games columns are in next_games, because this
+                    ## should never occur, and we would therefore want it throw an error
+                    self.new_games.dtypes
+                )
                 self.new_file_games = pd.concat([
                     self.new_games,
                     self.next_games[
@@ -335,6 +345,112 @@ class EloConstructor():
             ])
             self.new_file = self.new_file.reset_index(drop=True)
     
+    def add_game_id_and_week(self):
+        '''
+        Adds fields like week, and game id for easier joins down the road 
+        '''
+        ## replace team names ##
+        repl = {
+            'WSH' : 'WAS'
+        }
+        self.new_file['team1'] = self.new_file['team1'].replace(repl)
+        self.new_file['team2'] = self.new_file['team2'].replace(repl)
+        ## aling playoff nominclature to fastr ##
+        self.new_file['game_type'] = numpy.where(
+            pd.isnull(self.new_file['playoff']),
+            'REG', 'POST'
+        )
+        self.games['game_type'] = numpy.where(
+            numpy.isin(
+                self.games['game_type'],
+                ['WC', 'DIV', 'CON', 'SB']
+            ),
+            'POST',
+            self.games['game_type']
+        )
+        ## manually swap home and away teams in instances where ##
+        ## neutrals create a bad record ##
+        swaps = [
+            ## (date, home, away)
+            ('2000-01-30', 'LAR', 'TEN'),
+            ('2001-01-28', 'BAL', 'NYG'),
+            ('2002-02-03', 'LAR', 'NE'),
+            ('2003-10-27', 'MIA', 'LAC'),
+            ('2005-09-19', 'NYG', 'NO'),
+            ('2005-10-02', 'BUF', 'NO'),
+            ('2005-12-24', 'DET', 'NO'),
+            ('2006-02-05', 'SEA', 'PIT'),
+            ('2007-10-28', 'NYG', 'MIA'),
+            ('2007-02-04', 'IND', 'CHI'),
+            ('2008-02-03', 'NYG', 'NE'),
+            ('2008-10-26', 'LAC', 'NO'),
+            ('2009-02-01', 'PIT', 'ARI'),
+            ('2009-10-25', 'NE', 'TB'),
+            ('2010-02-07', 'NO', 'IND'),
+            ('2010-10-31', 'DEN', 'SF'),
+            ('2010-12-13', 'NYG', 'MIN'),
+            ('2011-02-06', 'PIT', 'GB'),
+            ('2011-10-23', 'CHI', 'TB'),
+            ('2012-02-05', 'NYG', 'NE'),
+            ('2012-10-28', 'NE', 'LAR'),
+            ('2013-02-03', 'BAL', 'SF'),
+            ('2013-09-29', 'PIT', 'MIN'),
+            ('2013-10-27', 'SF', 'JAX'),
+            ('2014-09-28', 'MIA', 'OAK'),
+            ('2014-10-26', 'DET', 'ATL'),
+            ('2014-11-09', 'DAL', 'JAX'),
+            ('2015-02-01', 'NE', 'SEA')
+        ]
+        for swap in swaps:
+            ## find record and get index ##
+            row_indexs = self.new_file.index[
+                (self.new_file['date'] == swap[0]) &
+                (self.new_file['team1'] == swap[1]) &
+                (self.new_file['team2'] == swap[2])
+            ].tolist()
+            if len(row_indexs) == 1:
+                ## need to swap all '1' values for '2' values and visa versa ##
+                for field in [
+                    'team{0}', 'elo{0}_pre', 'elo_prob{0}', 'elo{0}_post', 'qbelo{0}_pre',
+                    'qb{0}', 'qb{0}_value_pre', 'qb{0}_adj', 'qbelo_prob{0}',
+                    'qb{0}_game_value', 'qb{0}_value_post','qbelo{0}_post', 'score{0}'
+                ]:
+                    ## store values before replacement ##
+                    v1 = self.new_file.at[row_indexs[0], field.format(1)]
+                    v2 = self.new_file.at[row_indexs[0], field.format(2)]
+                    ## then repace ##
+                    self.new_file.at[row_indexs[0], field.format(1)] = v2
+                    self.new_file.at[row_indexs[0], field.format(2)] = v1
+            else:
+                print('     Warning -- Attempt to apply manual home/away fix to {0} failed'.format(swap))
+                print('                Index found: {0}'.format(len(row_indexs)))
+        ## apply game id after fixing ##
+        self.new_file = pd.merge(
+            self.new_file,
+            self.games[[
+                ## join ##
+                'home_team', 'away_team', 'season', 'game_type',
+                ## data to add ##
+                'game_id', 'week'
+            ]].groupby(['home_team', 'away_team', 'season', 'game_type']).head(1).rename(columns={
+                'home_team' : 'team1',
+                'away_team' : 'team2'
+            }),
+            on=['team1', 'team2', 'season', 'game_type'],
+            how='left'
+        )
+        ## print missing games if any ##
+        check = self.new_file[
+            (self.new_file['season'] >= 1999) &
+            (pd.isnull(self.new_file['game_id']))
+        ].copy()
+        if len(check) > 0:
+            print('     Warning -- some games are missing game_id:')
+            for index, row in check.iterrows():
+                print('          (date: {0}, home: {1}, away: {2})'.format(
+                    row['date'], row['team1'], row['team2']
+                ))
+
     def construct_elo_file(self):
         ## wrapper on the above functions that creates the elo file ##
         print('Constructing elo file...')
@@ -363,6 +479,7 @@ class EloConstructor():
         else:
             print('     Formatting games for elo file...')
             self.create_new_file()
+            self.add_game_id_and_week()
             print('     Saving new elo file...')
             self.new_file.to_csv(
                 '{0}/qb_elos.csv'.format(self.export_loc),
