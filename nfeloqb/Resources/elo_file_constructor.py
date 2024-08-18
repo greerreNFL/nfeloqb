@@ -378,6 +378,9 @@ class EloConstructor():
             ('2003-10-27', 'MIA', 'LAC'),
             ('2005-09-19', 'NYG', 'NO'),
             ('2005-10-02', 'BUF', 'NO'),
+            ## sneaky ones that will map, but create dupes! ##
+            ('2005-10-02', 'SF', 'ARI'),
+            ('2005-10-16', 'ATL', 'NO'),
             ('2005-12-24', 'DET', 'NO'),
             ('2006-02-05', 'SEA', 'PIT'),
             ('2007-10-28', 'NYG', 'MIA'),
