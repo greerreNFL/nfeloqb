@@ -5,6 +5,9 @@ import json
 import datetime
 import pandas as pd
 
+## get games for last played ##
+import nfelodcm as dcm
+
 ## import resources ##
 from .Resources import *
 
@@ -47,9 +50,15 @@ def run(perform_starter_update=False, model_only=False, force_run=False):
     ## get last starter change ##
     last_starter_change = at_wrapper.get_last_update()
     last_package_update = meta['last_updated']
+    last_package_game = meta['last_game_id']
+    ## get last game played ##
+    db = dcm.load(['games'])
+    last_game_played = db['games'][
+        ~pd.isnull(db['games']['result'])
+    ].iloc[-1]['game_id']
     ## see if update is required ##
     if last_package_update is not None and not force_run:
-        if last_starter_change < pd.to_datetime(last_package_update, utc=True):
+        if last_starter_change < pd.to_datetime(last_package_update, utc=True) and last_game_played == last_package_game:
             return None
     ## load data ##
     data = DataLoader()
@@ -89,7 +98,8 @@ def run(perform_starter_update=False, model_only=False, force_run=False):
     with open('{0}/package_meta.json'.format(package_folder), 'w') as fp:
         json.dump(
             {
-                'last_updated' : datetime.datetime.utcnow().isoformat() + 'Z'
+                'last_updated' : datetime.datetime.utcnow().isoformat() + 'Z',
+                'last_game_id' : last_game_played
             },
             fp
         )
