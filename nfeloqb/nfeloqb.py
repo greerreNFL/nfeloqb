@@ -50,7 +50,7 @@ def run(perform_starter_update=False, model_only=False, force_run=False):
     ## get last starter change ##
     last_starter_change = at_wrapper.get_last_update()
     last_package_update = meta['last_updated']
-    last_package_week = meta['last_game_id']
+    last_package_week = meta['last_full_week']
     ## get last full week ##
     last_full_season, last_full_week = dcm.get_season_state()
     last_full_week = '{0}_{1}'.format(last_full_season, last_full_week)
