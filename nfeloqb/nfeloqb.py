@@ -50,15 +50,13 @@ def run(perform_starter_update=False, model_only=False, force_run=False):
     ## get last starter change ##
     last_starter_change = at_wrapper.get_last_update()
     last_package_update = meta['last_updated']
-    last_package_game = meta['last_game_id']
-    ## get last game played ##
-    db = dcm.load(['games'])
-    last_game_played = db['games'][
-        ~pd.isnull(db['games']['result'])
-    ].iloc[-1]['game_id']
+    last_package_week = meta['last_game_id']
+    ## get last full week ##
+    last_full_season, last_full_week = dcm.get_season_state()
+    last_full_week = '{0}_{1}'.format(last_full_season, last_full_week)
     ## see if update is required ##
     if last_package_update is not None and not force_run:
-        if last_starter_change < pd.to_datetime(last_package_update, utc=True) and last_game_played == last_package_game:
+        if last_starter_change < pd.to_datetime(last_package_update, utc=True) and last_full_week == last_package_week:
             return None
     ## load data ##
     data = DataLoader()
@@ -99,7 +97,7 @@ def run(perform_starter_update=False, model_only=False, force_run=False):
         json.dump(
             {
                 'last_updated' : datetime.datetime.utcnow().isoformat() + 'Z',
-                'last_game_id' : last_game_played
+                'last_full_week' : last_full_week
             },
             fp
         )
