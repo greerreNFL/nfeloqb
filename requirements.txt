@@ -2,3 +2,4 @@ pandas
 numpy
 nfelodcm
 python-dotenv
+scipy
