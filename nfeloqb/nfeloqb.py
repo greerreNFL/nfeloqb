@@ -10,6 +10,7 @@ import nfelodcm as dcm
 
 ## import resources ##
 from .Resources import *
+from .DataModels import ModelConfig
 
 ## import env ##
 import os
@@ -24,14 +25,12 @@ except Exception as e:
     ## if running as action, these will already be in env ##
     pass
 
-
 def run(perform_starter_update=False, model_only=False, force_run=False):
     ## load configs and meta ##
     config = None
     meta = None
     package_folder = pathlib.Path(__file__).parent.parent.resolve()
-    with open('{0}/model_config.json'.format(package_folder)) as fp:
-        config = json.load(fp)
+    config = ModelConfig.from_file('{0}/model_config.json'.format(package_folder))
     with open('{0}/package_meta.json'.format(package_folder)) as fp:
         meta = json.load(fp)
     ## init AT ##
@@ -62,7 +61,7 @@ def run(perform_starter_update=False, model_only=False, force_run=False):
     data = DataLoader()
     ## run model ##
     print('Running QB model...')
-    model = QBModel(data.model_df, config)
+    model = QBModel(data.model_df, config.values)
     model.run_model()
     if model_only:
         return model
@@ -101,4 +100,3 @@ def run(perform_starter_update=False, model_only=False, force_run=False):
             },
             fp
         )
-
