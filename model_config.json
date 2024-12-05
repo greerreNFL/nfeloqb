@@ -1,21 +1,116 @@
 {
-  "player_regression_league_mp": 99.85,
-  "player_regression_league_height": 0.289,
-  "player_regression_career_mp": 35.16,
-  "player_regression_career_height": 0.910,
-  "player_sf": 0.0781,
-  "player_career_sf_base": 0.00,
-  "player_career_sf_height": 0.061,
-  "player_career_sf_mp": 112,
-  "rookie_draft_intercept": 10.7,
-  "rookie_draft_slope": -5.42,
-  "rookie_league_reg": 0.68,
-  "rookie_league_cap": -0.24,
-  "rookie_undrafted_draft_number": 300,
-  "team_off_league_reversion": 0.0972,
-  "team_off_qb_reversion": 0.617,
-  "team_off_sf": 0.0346,
-  "team_def_sf": 0.035,
-  "team_def_reversion": 0.40,
-  "init_value": 25
+  "player_regression_league_mp": {
+    "value": 99.85,
+    "description": "Midpoint of a QBs regression curve to the league average",
+    "opti_min": 10,
+    "opti_max": 250
+  },
+  "player_regression_league_height": {
+    "value": 0.289,
+    "description": "Maximum amount of regression to the league average",
+    "opti_min": 0,
+    "opti_max": 1
+  },
+  "player_regression_career_mp": {
+    "value": 35.16,
+    "description": "Midpoint of a QBs regression curve to their career average",
+    "opti_min": 10,
+    "opti_max": 250
+  },
+  "player_regression_career_height": {
+    "value": 0.910,
+    "description": "Maximum amount of regression to their career average",
+    "opti_min": 0,
+    "opti_max": 1
+  },
+  "player_sf": {
+    "value": 0.0781,
+    "description": "Alpha for the players week over week EWMA",
+    "opti_min": 0,
+    "opti_max": 1
+  },
+  "player_career_sf_base": {
+    "value": 0.00,
+    "description": "Base of the decay curve for a player's alpha",
+    "opti_min": 0,
+    "opti_max": 1
+  },
+  "player_career_sf_height": {
+    "value": 0.061,
+    "description": "Maximum decay of the players career EWMA",
+    "opti_min": 0,
+    "opti_max": 1
+  },
+  "player_career_sf_mp": {
+    "value": 112,
+    "description": "Midpoint of decay for a players career EWMA",
+    "opti_min": 10,
+    "opti_max": 250
+  },
+  "rookie_draft_intercept": {
+    "value" : 10.7,
+    "description": "Intercept for the rookie draft regression curve",
+    "opti_min": 0,
+    "opti_max": 100
+  },
+  "rookie_draft_slope": {
+    "value": -5.42,
+    "description": "Slope for the rookie draft regression curve",
+    "opti_min": -10,
+    "opti_max": 0
+  },
+  "rookie_league_reg": {
+    "value" : 0.68,
+    "description" : "Regression of a the team's previous QB Value to the league average",
+    "opti_min": 0,
+    "opti_max": 1
+  },
+  "rookie_league_cap": {
+    "value" : -0.24,
+    "description" : "Maximum discount to the league average for a rookie QB",
+    "opti_min": -1,
+    "opti_max": 0
+  },
+  "rookie_undrafted_draft_number": {
+    "value": 300,
+    "description": "Draft position assigned to an undrafted rookie",
+    "opti_min": 100,
+    "opti_max": 600
+  },
+  "team_off_league_reversion": {
+    "value": 0.0972,
+    "description": "Reversion to the league average for a team's starting QB value",
+    "opti_min": 0,
+    "opti_max": 1
+  },
+  "team_off_qb_reversion": {
+    "value": 0.617,
+    "description": "Reversion of the team's starting QB value to their week 1 starter QB value",
+    "opti_min": 0,
+    "opti_max": 1
+  },
+  "team_off_sf": {
+    "value": 0.0346,
+    "description": "Alpha for the team's QB value week over week EWMA",
+    "opti_min": 0,
+    "opti_max": 1
+  },
+  "team_def_sf": {
+    "value": 0.035,
+    "description": "Alpha for the team's defense value week over week EWMA",
+    "opti_min": 0,
+    "opti_max": 1
+  },
+  "team_def_reversion": {
+    "value": 0.40,
+    "description": "Reversion of the team's defense value to the league average",
+    "opti_min": 0,
+    "opti_max": 1
+  },
+  "init_value": {
+    "value": 25,
+    "description": "Initial value the league's QB value average",
+    "opti_min": 0,
+    "opti_max": 100
+  }
 }

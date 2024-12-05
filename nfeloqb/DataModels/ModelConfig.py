@@ -1,47 +1,64 @@
+## built ins ##
+import json
 from dataclasses import dataclass
+import pathlib
+
+## local data models ##
+from .ModelParam import ModelParam
 
 @dataclass
 class ModelConfig:
   '''
-  Typed object for the model config json file.
+  Class for a model config, which is comprised of ModelParam objects.
   '''
-  player_regression_league_mp: float
-  player_regression_league_height: float
-  player_regression_career_mp: float
-  player_regression_career_height: float
-  player_sf: float
-  player_career_sf_base: float
-  player_career_sf_height: float
-  player_career_sf_mp: float
-  rookie_draft_intercept: float
-  rookie_draft_slope: float
-  rookie_league_reg: float
-  rookie_league_cap: float
-  rookie_undrafted_draft_number: float
-  team_off_league_reversion: float
-  team_off_qb_reversion: float
-  team_off_sf: float
-  team_def_sf: float
-  team_def_reversion: float
-  init_value: float
+  params: dict[str, ModelParam]
+  values: dict[str, float]
 
   @classmethod
-  def from_dict(cls, json_data: dict) -> 'ModelConfig':
+  def from_dict(cls, dict_data: dict) -> 'ModelConfig':
     '''
     Create a ModelConfig from a dictionary.
     '''
-    ## validate the data ##
-    missing_fields = []
-    for field in fields(cls):
-      if field.name not in json_data:
-        missing_fields.append(field.name)
-    if missing_fields:
-      raise ValueError(f"Config missing required fields: {missing_fields}")
+    ## create params ##
+    params = {}
+    values = {}
+    for k, v in dict_data.items():
+      v['param_name'] = k
+      param = ModelParam.from_dict(v)
+      params[k] = param
+      values[k] = param.value
     ## create the object ##
-    return cls(**json_data)
+    return cls(params=params, values=values)
 
   @classmethod
   def from_file(cls, file_path: str) -> 'ModelConfig':
-    with open(file_path, 'r') as file:
-      json_data = json.load(file)
+    '''
+    Create a ModelConfig from a json file.
+    '''
+    with open(file_path, 'r') as fp:
+      json_data = json.load(fp)
     return cls.from_dict(json_data)
+  
+  def update_config(self, new_values: dict[str, float]) -> None:
+    '''
+    Update the ModelConfig with new values.
+    '''
+    for k, v in new_values.items():
+      self.values[k] = v
+      self.params[k].value = v
+  
+  def to_config_dict(self) -> dict:
+    '''
+    Convert the ModelConfig to a config dictionary.
+    '''
+    return {k: v.as_config_dict() for k, v in self.params.items()}
+  
+  def to_file(self) -> None:
+    '''
+    Convert the ModelConfig to a dictionary and save it to a json file.
+    '''
+    ## get root of pacakge ##
+    root_fp = pathlib.Path(__file__).parent.parent.parent.resolve()
+    config_fp = '{0}/model_config.json'.format(root_fp)
+    with open(config_fp, 'w') as file:
+      json.dump(self.to_config_dict(), file, indent=4)
