@@ -5,3 +5,4 @@ __pycache__
 
 /nfeloqb/Optimizer/In-flight Results/*.csv
 /nfeloqb/Optimizer/Results/*.csv
+/Development/*.csv

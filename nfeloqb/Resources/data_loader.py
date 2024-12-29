@@ -118,6 +118,7 @@ class DataLoader():
                     'home_team', 'away_team',
                     'home_qb_id', 'home_qb_name',
                     'away_qb_id', 'away_qb_name',
+                    'wind', 'temp'
                 ]].rename(columns={
                     'home_team' : 'team',
                     'home_qb_id' : 'starter_id',
@@ -131,6 +132,7 @@ class DataLoader():
                     'home_team', 'away_team',
                     'home_qb_id', 'home_qb_name',
                     'away_qb_id', 'away_qb_name',
+                    'wind', 'temp'
                 ]].rename(columns={
                     'away_team' : 'team',
                     'away_qb_id' : 'starter_id',
@@ -197,7 +199,8 @@ class DataLoader():
             'game_id', 'season', 'week', 'gameday', 'team', 'opponent', 'player_id', 'player_name', 'player_display_name',
             'start_number', 'rookie_year', 'entry_year', 'draft_number',
             'completions', 'attempts', 'passing_yards', 'passing_tds',
-            'interceptions', 'sacks', 'carries', 'rushing_yards', 'rushing_tds'
+            'interceptions', 'sacks', 'carries', 'rushing_yards', 'rushing_tds',
+            'wind', 'temp'
         ]].copy()
     
     def calculate_raw_value(self, df):
