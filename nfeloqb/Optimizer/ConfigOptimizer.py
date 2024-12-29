@@ -6,6 +6,7 @@ import datetime
 
 ## external packages ##
 import pandas as pd
+import numpy
 from scipy.optimize import minimize
 
 ## data models ##
@@ -19,14 +20,19 @@ class ConfigOptimizer:
   def __init__(self,
     data: pd.DataFrame,
     config: ModelConfig,
-    tol=0.000001,
-    step=0.00001,
-    method='SLSQP',
+    objective_name: str = 'mae',
+    tol: float = 0.000001,
+    step: float = 0.00001,
+    method: str = 'SLSQP',
     subset: list[str] = [],
-    subset_name: str = 'subset'
+    subset_name: str = 'subset',
+    obj_normalization: int = 30,
+    randomize_bgs: bool = False
   ):
     self.data: pd.DataFrame = data
     self.config: ModelConfig = config
+    self.objective_name: str = objective_name
+    self.validate_objective()
     self.subset: list[str] = subset
     self.subset_name: str = subset_name
     ## optimizer setup ##
@@ -36,15 +42,25 @@ class ConfigOptimizer:
     self.tol: float = tol
     self.step: float = step
     self.method: str = method
+    self.obj_normalization: int = obj_normalization
+    self.randomize_bgs: bool = randomize_bgs
     self.init_features()
     ## in-optimization data ##
     self.round_number: int = 0
     self.optimization_records: list[dict] = []
-    self.best_mae: Optional[float] = None
+    self.best_obj: Optional[float] = None
     ## post optimization data ##
     self.solution: Any = None
     self.optimization_results: dict = {}
   
+  def validate_objective(self):
+    '''
+    Validates whether the objective is a valid option returned
+    by the scored record.
+    '''
+    if self.objective_name not in ['mae', 'mae_first_16', 'mae_backup']:
+      raise ValueError('Objective {0} is not a valid option returned by the scored record.'.format(self.objective_name))
+
   def normalize_param(self, value: float, param: ModelParam) -> float:
     '''
     Normalize a parameter to a value between 0 and 1.
@@ -77,7 +93,10 @@ class ConfigOptimizer:
       if len(self.subset) > 0 and k not in self.subset:
         continue
       self.features.append(k)
-      self.bgs.append(self.normalize_param(v.value, v))
+      self.bgs.append(
+        self.normalize_param(v.value, v) if not self.randomize_bgs
+        else numpy.random.uniform(0, 1)
+      )
       self.bounds.append((0,1)) ## all features are normalized ##
 
   def objective(self, x: list[float]) -> float:
@@ -87,7 +106,25 @@ class ConfigOptimizer:
     ## increment the round number ##
     self.round_number += 1
     ## initialize a QBModel ##
-    model = QBModel(self.data, self.denormalize_optimizer_values(x))
+    ## create a denormalized config ##
+    denormalized_dict = self.denormalize_optimizer_values(x)
+    ## transalte into a config compatible dict ##
+    denormalized_config_dict = {}
+    for k, v in denormalized_dict.items():
+      denormalized_config_dict[k] = {
+        'param_name': k,
+        'value': v,
+        'description': 'none, created from denormalized optimizer values',
+        'opti_min': numpy.nan,
+        'opti_max': numpy.nan
+      }
+    ## create a new config object ##
+    denormalized_config = ModelConfig.from_dict(denormalized_config_dict)
+    ## create the model ##
+    model = QBModel(
+      self.data,
+      denormalized_config
+    )
     ## run the model ##
     model.run_model()
     ## score the model ##
@@ -96,11 +133,11 @@ class ConfigOptimizer:
     self.optimization_records.append(scored_record)
     ## save the record if it is a new best, or if it an interval of 100 rounds ##
     save_record = False
-    if self.best_mae is None:
-      self.best_mae = scored_record['mae']
+    if self.best_obj is None:
+      self.best_obj = scored_record[self.objective_name]
       save_record = True
-    elif scored_record['mae'] < self.best_mae:
-      self.best_mae = scored_record['mae']
+    elif scored_record[self.objective_name] < self.best_obj:
+      self.best_obj = scored_record[self.objective_name]
       save_record = True
     if self.round_number % 100 == 0:
       save_record = True
@@ -112,7 +149,7 @@ class ConfigOptimizer:
         '_{0}'.format(self.subset_name) if len(self.subset) > 0 else ''
       ))
     ## calculate the objective ##
-    return scored_record['mae']
+    return scored_record[self.objective_name] / self.obj_normalization
 
   def update_config(self, x: list[float]):
     '''
@@ -159,7 +196,7 @@ class ConfigOptimizer:
     ## values ##
     optimal_config = self.denormalize_optimizer_values(solution.x)
     ## add objective function reached ##
-    self.optimization_results['mae'] = solution.fun
+    self.optimization_results['mae'] = solution.fun * self.obj_normalization
     self.optimization_results['runtime'] = end_time - start_time
     ## extend the optimization results with the optimal config ##
     self.optimization_results = self.optimization_results | optimal_config
@@ -174,3 +211,18 @@ class ConfigOptimizer:
     ## update the config if needed ##
     if update_config:
       self.update_config(solution.x)
+
+  def get_best_record(self) -> dict:
+    '''
+    Gets the best record from the stored optimization records. Since the final optimization
+    result does not have the same level of detail, this function is useful for getting the
+    best config, along with the rmse and mae, and the corresponding values for
+    simple rolling average models that can be used for giving context on error magnitude.
+    '''
+    ## get the best record ##
+    df = pd.DataFrame(self.optimization_records)
+    return df.sort_values(
+      by=['mae'],
+      ascending=[True]
+    ).reset_index(drop=True).to_dict(orient='records')[0]
+

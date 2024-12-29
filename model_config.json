@@ -1,74 +1,86 @@
 {
   "player_regression_league_mp": {
-    "value": 99.85,
-    "description": "Midpoint of a QBs regression curve to the league average",
-    "opti_min": 10,
+    "value": 182.82,
+    "description": "The number of starts at which point a QB's off-season regression to the league average has fallen to 50% of it's max",
+    "opti_min": 125,
     "opti_max": 250
   },
   "player_regression_league_height": {
-    "value": 0.289,
-    "description": "Maximum amount of regression to the league average",
-    "opti_min": 0,
-    "opti_max": 1
+    "value": 0.265,
+    "description": "Maximum amount of off-season regression a QB receives to the league average",
+    "opti_min": 0.20,
+    "opti_max": 0.40
   },
   "player_regression_career_mp": {
-    "value": 35.16,
-    "description": "Midpoint of a QBs regression curve to their career average",
-    "opti_min": 10,
-    "opti_max": 250
+    "value": 66.63,
+    "description": "The number of starts at which a QB is receiving 50% of their rolling long term average off-season regression",
+    "opti_min": 25,
+    "opti_max": 120
   },
   "player_regression_career_height": {
-    "value": 0.910,
-    "description": "Maximum amount of regression to their career average",
-    "opti_min": 0,
-    "opti_max": 1
+    "value": 0.820,
+    "description": "Maximum amount of off-season regression to a QBs rolling long term average",
+    "opti_min": 0.50,
+    "opti_max": 1.00
   },
   "player_sf": {
-    "value": 0.0781,
+    "value": 0.0886,
     "description": "Alpha for the players week over week EWMA",
     "opti_min": 0,
-    "opti_max": 1
+    "opti_max": 0.20
   },
   "player_career_sf_base": {
-    "value": 0.00,
-    "description": "Base of the decay curve for a player's alpha",
-    "opti_min": 0,
-    "opti_max": 1
+    "value": 0.0041,
+    "description": "The base rate for alpha in a player's career rolling EWMA",
+    "opti_min": 0.00,
+    "opti_max": 0.05
   },
   "player_career_sf_height": {
-    "value": 0.061,
-    "description": "Maximum decay of the players career EWMA",
+    "value": 0.0653,
+    "description": "The maximum amount of additional alpha a player's career EWMA can receive",
     "opti_min": 0,
-    "opti_max": 1
+    "opti_max": 0.20
   },
   "player_career_sf_mp": {
-    "value": 112,
-    "description": "Midpoint of decay for a players career EWMA",
+    "value": 109.05,
+    "description": "The number of starts at which point a player's career EWMA has received 50% of it's maximum additional alpha",
     "opti_min": 10,
     "opti_max": 250
   },
+  "player_prog_disc_alpha": {
+    "value": 0.00199,
+    "description": "Amount to progressivelydiscount the projection error by when updating a player's value",
+    "opti_min": 0,
+    "opti_max": 0.005
+  },
+  "player_team_adj_allotment_disc": {
+    "value": 0.10,
+    "description": "The percent of the team's other QB adjustments that should be received by this QB in their first start as a backup",
+    "opti_min": 0,
+    "opti_max": 0.50
+  },
   "rookie_draft_intercept": {
-    "value" : 10.7,
+    "value" : 9.872,
     "description": "Intercept for the rookie draft regression curve",
     "opti_min": 0,
     "opti_max": 100
   },
   "rookie_draft_slope": {
-    "value": -5.42,
+    "value": -4.619,
     "description": "Slope for the rookie draft regression curve",
     "opti_min": -10,
     "opti_max": 0
   },
   "rookie_league_reg": {
-    "value" : 0.68,
+    "value" : 0.820,
     "description" : "Regression of a the team's previous QB Value to the league average",
     "opti_min": 0,
     "opti_max": 1
   },
   "rookie_league_cap": {
-    "value" : -0.24,
+    "value" : -0.203,
     "description" : "Maximum discount to the league average for a rookie QB",
-    "opti_min": -1,
+    "opti_min": -0.50,
     "opti_max": 0
   },
   "rookie_undrafted_draft_number": {
@@ -93,19 +105,43 @@
     "value": 0.0346,
     "description": "Alpha for the team's QB value week over week EWMA",
     "opti_min": 0,
-    "opti_max": 1
+    "opti_max": 0.20
   },
   "team_def_sf": {
-    "value": 0.035,
+    "value": 0.0371,
     "description": "Alpha for the team's defense value week over week EWMA",
     "opti_min": 0,
-    "opti_max": 1
+    "opti_max": 0.10
   },
   "team_def_reversion": {
-    "value": 0.40,
+    "value": 0.359,
     "description": "Reversion of the team's defense value to the league average",
-    "opti_min": 0,
-    "opti_max": 1
+    "opti_min": 0.20,
+    "opti_max": 0.60
+  },
+  "wind_disc_height": {
+    "value": -7.42,
+    "description": "Maximum discount for high winds",
+    "opti_min": -25,
+    "opti_max": 0
+  },
+  "wind_disc_mp": {
+    "value": 7.61,
+    "description": "Midpoint of the wind discount curve",
+    "opti_min": 1,
+    "opti_max": 20
+  },
+  "temp_disc_height": {
+    "value": -19.14,
+    "description": "Maximum discount for high temperatures",
+    "opti_min": -25,
+    "opti_max": 0
+  },
+  "temp_disc_mp": {
+    "value": 19.14,
+    "description": "Midpoint of the temperature discount curve",
+    "opti_min": 10,
+    "opti_max": 40
   },
   "init_value": {
     "value": 25,

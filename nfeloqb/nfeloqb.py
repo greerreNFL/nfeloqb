@@ -61,7 +61,7 @@ def run(perform_starter_update=False, model_only=False, force_run=False):
     data = DataLoader()
     ## run model ##
     print('Running QB model...')
-    model = QBModel(data.model_df, config.values)
+    model = QBModel(data.model_df, config)
     model.run_model()
     if model_only:
         return model
@@ -91,6 +91,19 @@ def run(perform_starter_update=False, model_only=False, force_run=False):
         package_folder
     )
     constructor.construct_elo_file()
+    ## save flattened qb and team data ##
+    pd.DataFrame(model.data_team).sort_values(
+        by=['team', 'season', 'week'],
+        ascending=[True, True, True]
+    ).reset_index(drop=True).to_csv(
+        '{0}/Other Data/defensive_adjustments.csv'.format(package_folder),
+        index=False
+    )
+    ## save flattened qb records ##
+    pd.DataFrame(model.qb_records).to_csv(
+        '{0}/Other Data/weekly_qb_states.csv'.format(package_folder),
+        index=False
+    )
     ## update the last updated timestamp ##
     with open('{0}/package_meta.json'.format(package_folder), 'w') as fp:
         json.dump(

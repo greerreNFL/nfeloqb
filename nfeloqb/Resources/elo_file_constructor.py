@@ -109,9 +109,9 @@ class EloConstructor():
         qb_value = self.qb_model.get_qb_value(row)
         ## return the value ##
         return qb_value
-    
-    def add_starters(self):
-        ## add starters and values to the new games ##
+        
+    def add_starters_and_team_values(self):
+        ## add starters and team values to the new games ##
         ## this also needs to handle season over season regressions ##
         ## update starters ##
         self.at_wrapper.pull_current_starters()
@@ -123,57 +123,45 @@ class EloConstructor():
             starter_dict[row['team']]['qb_name'] = row['player_display_name']
             starter_dict[row['team']]['draft_number'] = row['draft_number']
         ## helper func to apply to new games ##
-        def apply_starters(row, starter_dict):
+        def apply_starters_and_team_values(row, starter_dict):
             ## home ##
             row['qb1_id'] = starter_dict[row['home_team']]['qb_id']
             row['qb1'] = starter_dict[row['home_team']]['qb_name']
-            row['qb1_value_pre'] = self.extract_starter_values(
-                row['qb1_id'], row['season'], row['home_team'],
-                starter_dict[row['home_team']]['draft_number'], row['gameday']
-            )
+            qb1, team1, opponent1 = self.qb_model.get_objects({
+                'player_id' : row['qb1_id'],
+                'player_display_name' : row['qb1'],
+                'team' : row['home_team'],
+                'opponent' : row['away_team'],
+                'season' : row['season'],
+                'draft_number' : starter_dict[row['home_team']]['draft_number'],
+                'gameday' : row['gameday']
+            })
+            row['qb1_value_pre'] = qb1.current_value
+            row['qb1_adj'] = qb1.current_value - team1.off_value
             row['qb1_game_value'] = numpy.nan
             row['qb1_value_post'] = numpy.nan
-            ## away ##
+            ## away ##  
             row['qb2_id'] = starter_dict[row['away_team']]['qb_id']
             row['qb2'] = starter_dict[row['away_team']]['qb_name']
-            row['qb2_value_pre'] = self.extract_starter_values(
-                row['qb2_id'], row['season'], row['away_team'],
-                starter_dict[row['away_team']]['draft_number'], row['gameday']
-            )
+            qb2, team2, opponent2 = self.qb_model.get_objects({
+                'player_id' : row['qb2_id'],
+                'player_display_name' : row['qb2'],
+                'team' : row['away_team'],
+                'opponent' : row['home_team'],
+                'season' : row['season'],
+                'draft_number' : starter_dict[row['away_team']]['draft_number'],
+                'gameday' : row['gameday']
+            })
+            row['qb2_value_pre'] = qb2.current_value
+            row['qb2_adj'] = qb2.current_value - team2.off_value
             row['qb2_game_value'] = numpy.nan
             row['qb2_value_post'] = numpy.nan
             ## return ##
             return row
         ## apply ##
         self.next_games = self.next_games.apply(
-            apply_starters,
+            apply_starters_and_team_values,
             starter_dict=starter_dict,
-            axis=1
-        )
-    
-    def add_team_values(self):
-        ## once next week has been updated with starter values, add team values ##
-        ## and make adjustments ##
-        ## first set the models current week to the week of next games ##
-        self.qb_model.current_week = self.next_games.iloc[0]['week']
-        ## helper to add team values ##
-        def apply_team_values(row):
-            ## home ##
-            home_val, home_adj = self.qb_model.get_team_off_value(
-                row['home_team'], row['qb1_value_pre'], row['season']
-            )
-            ## away ##
-            away_val, away_adj = self.qb_model.get_team_off_value(
-                row['away_team'], row['qb2_value_pre'], row['season']
-            )
-            ## add adjs to row ##
-            row['qb1_adj'] = home_adj
-            row['qb2_adj'] = away_adj
-            ## return ##
-            return row
-        ## apply ##
-        self.next_games = self.next_games.apply(
-            apply_team_values,
             axis=1
         )
     
@@ -240,7 +228,6 @@ class EloConstructor():
                 apply_elo_to_next,
                 axis=1
             )
-    
     
     def merge_new_and_next(self):
         ## merge new games and next games with logic to handle blanks ##
@@ -470,9 +457,9 @@ class EloConstructor():
             print('     No next games found')
         else:
             print('          Found {0} next games. Pulling projected starters...'.format(len(self.next_games)))
-            self.add_starters()
-            print('          Adding team values for adjustments...')
-            self.add_team_values()
+            ## CHANGE TO A SINGLE FUNCTION FOR BOTH STARTERS AND TEAM SINCE BOTH RELY ON THE SAME STATE ##
+            print('          Adding starters and team values...')
+            self.add_starters_and_team_values()
         print('     Adding Elo model...')
         self.add_elo_to_new_and_next()
         print('     Merging new and next games...')
