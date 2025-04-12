@@ -82,7 +82,7 @@ class DataLoader():
             return df
         ## get player meta ##
         try:
-            meta = self.db['players']
+            meta = self.db['players'].copy()
             meta = meta.groupby(['gsis_id']).head(1)
             ## add to df ##
             df = pd.merge(

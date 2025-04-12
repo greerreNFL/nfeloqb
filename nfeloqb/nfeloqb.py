@@ -104,6 +104,11 @@ def run(perform_starter_update=False, model_only=False, force_run=False):
         '{0}/Other Data/weekly_qb_states.csv'.format(package_folder),
         index=False
     )
+    ## save meta data ##
+    meta_constructor = MetaConstructor(
+        players=data.db['players'],
+        elo_file=constructor.new_file
+    )
     ## update the last updated timestamp ##
     with open('{0}/package_meta.json'.format(package_folder), 'w') as fp:
         json.dump(
