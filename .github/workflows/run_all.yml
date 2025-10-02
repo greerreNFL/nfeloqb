@@ -1,6 +1,8 @@
-name: run
+name: Update QB Model
 
 on:
+  repository_dispatch:
+    types: [airtable_qb_update]
   schedule:
     - cron: '0 8 * 8-12,1-2 2-4'
 
