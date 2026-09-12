@@ -84,10 +84,11 @@ class EloConstructor():
         ## if there are no games, b/c the season is over, stop ##
         if len(unplayed) == 0:
             return None
-        ## if there is a next week, filter games ##
-        self.next_games = self.games[
-            (self.games['season'] == unplayed.iloc[0]['season']) &
-            (self.games['week'] == unplayed.iloc[0]['week'])
+        ## if there is a next week, keep only unplayed games ##
+        ## played games in the same week are already in new_games ##
+        self.next_games = unplayed[
+            (unplayed['season'] == unplayed.iloc[0]['season']) &
+            (unplayed['week'] == unplayed.iloc[0]['week'])
         ].copy()
     
     def extract_starter_values(self, qb_id, season, team, draft_number, gameday):
