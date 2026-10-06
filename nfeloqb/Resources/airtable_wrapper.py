@@ -236,10 +236,10 @@ class AirtableWrapper():
         ## determine size of df ##
         df_len = len(df)
         chunks_needed = math.ceil(df_len / 10)
-        ## split ##
-        df_chunks = numpy.array_split(df, chunks_needed)
-        ## write ##
-        for chunk in df_chunks:
+        ## split with iloc so chunks stay DataFrames ##
+        ## numpy.array_split returns ndarrays on pandas 3+ ##
+        for i in range(chunks_needed):
+            chunk = df.iloc[i * 10:(i + 1) * 10]
             ## turn chunk into record ##
             self.write_chunk(base, table, chunk)
     
@@ -249,10 +249,10 @@ class AirtableWrapper():
         ## determine size of df ##
         df_len = len(df)
         chunks_needed = math.ceil(df_len / 10)
-        ## split ##
-        df_chunks = numpy.array_split(df, chunks_needed)
-        ## write ##
-        for chunk in df_chunks:
+        ## split with iloc so chunks stay DataFrames ##
+        ## numpy.array_split returns ndarrays on pandas 3+ ##
+        for i in range(chunks_needed):
+            chunk = df.iloc[i * 10:(i + 1) * 10]
             ## turn chunk into record ##
             self.update_chunk(base, table, chunk, id_col)
     
