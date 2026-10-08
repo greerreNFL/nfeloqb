@@ -22,6 +22,7 @@ class Elo():
         self.playoff = playoff
         ## storage ##
         self.current_elos = {}
+        self.current_qbelos = {}
         self.elo_records = []
         self.elo_df = None
         ## states ##
@@ -109,13 +110,14 @@ class Elo():
         self.game['home_qb_elo_adj'] = self.game['home_qb_elo_adj'].fillna(0) * 3.3
         self.game['away_qb_elo_adj'] = self.game['away_qb_elo_adj'].fillna(0) * 3.3
         ## add adj ##
-        self.game['qb_adj'] = self.game['home_qb_elo_adj'] + self.game['away_qb_elo_adj']
+        self.game['qb_adj'] = self.game['home_qb_elo_adj'] - self.game['away_qb_elo_adj']
     
     def init_elos(self):
         ## initialize the current elo dict ##
         teams = self.game['home_team'].unique()
         for team in teams:
             self.current_elos[team] = self.base
+            self.current_qbelos[team] = self.base
         ## init states ##
         self.current_season = self.game['season'].min()
         self.current_week = self.game[self.game['season']==self.current_season]['week'].min()
@@ -128,36 +130,38 @@ class Elo():
         for team, last_elo in self.current_elos.items():
             ## regress to mean ##
             new_elo = (last_elo * (1-self.reg)) + (self.base * self.reg)
+            new_qbelo = (self.current_qbelos[team] * (1-self.reg)) + (self.base * self.reg)
             ## if get vegas ratings ##
             temp = self.wt_ratings[
                 (self.wt_ratings['team']==team) &
                 (self.wt_ratings['season']==self.current_season)
             ].copy()
             if len(temp) > 0:
-                new_elo = (
-                    (new_elo * (1-self.reg_vegas)) +
+                new_qbelo = (
+                    (new_qbelo * (1-self.reg_vegas)) +
                     (temp.iloc[0]['wt_rating_elo'] * self.reg_vegas)
                 )
             ## update dict ##
             self.current_elos[team] = new_elo
+            self.current_qbelos[team] = new_qbelo
         
     def calc_elo_difs(self, record):
         ## function that calcualtes the elo difs for a given record ##
         ## get current elos ##
         home_elo = self.current_elos[record['home_team']]
         away_elo = self.current_elos[record['away_team']]
+        home_qbelo = self.current_qbelos[record['home_team']]
+        away_qbelo = self.current_qbelos[record['away_team']]
         ## calc dif ##
-        elo_dif = home_elo - away_elo + record['hfa'] + record['qb_adj'] + record['rest_dif']
-        elo_dif_ex_qb = home_elo - away_elo + record['hfa'] + record['rest_dif']
+        elo_dif = home_elo - away_elo + record['hfa'] + record['rest_dif']
+        qbelo_dif = home_qbelo - away_qbelo + record['hfa'] + record['qb_adj'] + record['rest_dif']
         ## calc probs ##
-        home_prob = 1 / (10 ** (-elo_dif/self.b) + 1)
-        away_prob = 1 - home_prob
-        home_prob_ex_qb = 1 / (10 ** (-elo_dif_ex_qb/self.b) + 1)
-        away_prob_ex_qb = 1 - home_prob_ex_qb
+        elo_prob1 = 1 / (10 ** (-elo_dif/self.b) + 1)
+        qbelo_prob1 = 1 / (10 ** (-qbelo_dif/self.b) + 1)
         ## return ##
-        return home_elo, away_elo, home_prob, away_prob, elo_dif, home_prob_ex_qb, away_prob_ex_qb
+        return home_elo, away_elo, home_qbelo, away_qbelo, elo_prob1, qbelo_prob1, elo_dif, qbelo_dif
         
-    def update_elos(self, record, home_elo, away_elo, home_prob, away_prob, elo_dif):
+    def update_elos(self, record, home_elo, away_elo, home_prob, elo_dif, current_elos):
         ## function that updates the elos for a given record ##
         ## create result variables
         mov_elo_dif = elo_dif
@@ -181,10 +185,10 @@ class Elo():
         )
         ## calc new elos ##
         new_home_elo = home_elo + ((self.k * (home_result - home_prob)) * mov_mult)
-        new_away_elo = away_elo + ((self.k * (away_result - away_prob)) * mov_mult)
+        new_away_elo = away_elo + ((self.k * (away_result - (1 - home_prob))) * mov_mult)
         ## update dict ##
-        self.current_elos[record['home_team']] = new_home_elo
-        self.current_elos[record['away_team']] = new_away_elo
+        current_elos[record['home_team']] = new_home_elo
+        current_elos[record['away_team']] = new_away_elo
         ## return ##
         return new_home_elo, new_away_elo
 
@@ -194,30 +198,35 @@ class Elo():
         if record['season'] > self.current_season:
             self.handle_regression()
         ## get elos and probs ##
-        home_elo, away_elo, home_prob, away_prob, elo_dif, home_prob_ex_qb, away_prob_ex_qb = self.calc_elo_difs(record)
+        home_elo, away_elo, home_qbelo, away_qbelo, elo_prob1, qbelo_prob1, elo_dif, qbelo_dif = self.calc_elo_difs(record)
         ## if the game has been played, update elos ##
         if pd.isnull(record['result']):
             new_home_elo = numpy.nan
             new_away_elo = numpy.nan
+            new_home_qbelo = numpy.nan
+            new_away_qbelo = numpy.nan
         else:
             new_home_elo, new_away_elo = self.update_elos(
-                record, home_elo, away_elo, home_prob, away_prob, elo_dif
+                record, home_elo, away_elo, elo_prob1, elo_dif, self.current_elos
+            )
+            new_home_qbelo, new_away_qbelo = self.update_elos(
+                record, home_qbelo, away_qbelo, qbelo_prob1, qbelo_dif, self.current_qbelos
             )
         ## return ##
         self.elo_records.append({
             'game_id': record['game_id'],
             'elo1_pre': home_elo,
             'elo2_pre': away_elo,
-            'elo_prob1': home_prob_ex_qb,
-            'elo_prob2': away_prob_ex_qb,
+            'elo_prob1': elo_prob1,
+            'elo_prob2': 1 - elo_prob1,
             'elo1_post': new_home_elo,
             'elo2_post': new_away_elo,
-            'qbelo1_pre': home_elo + record['home_qb_elo_adj'],
-            'qbelo2_pre': away_elo + record['away_qb_elo_adj'],
-            'qbelo_prob1': home_prob,
-            'qbelo_prob2': away_prob,
-            'qbelo1_post': new_home_elo + record['home_qb_elo_adj'],
-            'qbelo2_post': new_away_elo + record['away_qb_elo_adj']
+            'qbelo1_pre': home_qbelo,
+            'qbelo2_pre': away_qbelo,
+            'qbelo_prob1': qbelo_prob1,
+            'qbelo_prob2': 1 - qbelo_prob1,
+            'qbelo1_post': new_home_qbelo,
+            'qbelo2_post': new_away_qbelo
         })
 
     def run(self):
