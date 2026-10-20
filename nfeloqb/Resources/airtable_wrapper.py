@@ -551,10 +551,23 @@ class AirtableWrapper():
                 'player_id' : record['fields']['player_id'],
                 'player_display_name' : record['fields']['player_display_name'],
                 'draft_number' : record['fields']['draft_number'],
-                'last_updated' : record['fields']['last_updated']
+                'last_updated' : record['fields']['last_updated'],
+                'starter_certainty' : self.record_starter_certainty(record)
             })
         ## write ##
         self.starters_df = pd.DataFrame(starters_data)
+
+    def record_starter_certainty(self, record):
+        ## per-QB starter certainty from the starter table ##
+        ## missing stays missing so the output file can leave the game blank ##
+        fields = record.get('fields', {})
+        if 'starter_certainty' in fields:
+            value = fields['starter_certainty']
+        elif 'starter certainty' in fields:
+            value = fields['starter certainty']
+        else:
+            return numpy.nan
+        return pd.to_numeric(value, errors='coerce')
     
     def get_last_update(self):
         '''
