@@ -543,7 +543,7 @@ class AirtableWrapper():
         starters_data = []
         for record in qbs_resp:
             ## control for missing ##
-            for field in ['team', 'player_id', 'player_display_name', 'draft_number', 'last_updated']:
+            for field in ['team', 'player_id', 'player_display_name', 'draft_number', 'last_updated', 'starter_certainty']:
                 if field not in record['fields']:
                     record['fields'][field] = numpy.nan
             starters_data.append({
@@ -551,7 +551,8 @@ class AirtableWrapper():
                 'player_id' : record['fields']['player_id'],
                 'player_display_name' : record['fields']['player_display_name'],
                 'draft_number' : record['fields']['draft_number'],
-                'last_updated' : record['fields']['last_updated']
+                'last_updated' : record['fields']['last_updated'],
+                'starter_certainty' : record['fields']['starter_certainty']
             })
         ## write ##
         self.starters_df = pd.DataFrame(starters_data)
