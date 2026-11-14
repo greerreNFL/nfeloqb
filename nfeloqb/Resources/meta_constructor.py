@@ -77,7 +77,8 @@ class MetaConstructor():
             'first_name',
             'last_name',
             'short_name',
-            'status', 
+            'status',
+            'team_abbr',
             'birth_date', 
             'college_name', 
             'height',
@@ -91,7 +92,8 @@ class MetaConstructor():
         ]].rename(columns={
             'college_name': 'college',
             'draft_club': 'draft_team',
-            'headshot': 'headshot_url'
+            'headshot': 'headshot_url',
+            'team_abbr': 'latest_team',
         }).copy()
         ## perform replacement on name ##
         qbs['display_name'] = qbs['display_name'].replace(self.repl['fastr_repl'])

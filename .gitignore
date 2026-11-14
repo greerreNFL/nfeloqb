@@ -3,6 +3,7 @@ secrets.json
 __pycache__
 .env
 .cursor/*
+.local/
 
 /nfeloqb/Optimizer/In-flight Results/*.csv
 /nfeloqb/Optimizer/Results/*.csv
